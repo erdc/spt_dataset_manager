@@ -11,7 +11,7 @@ $ pip install tethys_dataset_services
 ##Step 2: Download the source code
 ```
 $ cd /path/to/your/scripts/
-$ git clone https://github.com/erdc-cm/spt_dataset_manager.git
+$ git clone https://github.com/CI-WATER/sfpt_dataset_manager.git
 ```
 
 #Troubleshooting
