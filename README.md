@@ -31,7 +31,7 @@ and make it look like this:
 ```python
 def create_resource(self, dataset_id, url=None, file=None, console=False, **kwargs):
 ...
-#if url and file:
+  #if url and file:
       #raise IOError('The url and file parameters are mutually exclusive: use one, not both.')
   if not url and not file:
       raise IOError('The url or file parameter is required, but do not use both.')
