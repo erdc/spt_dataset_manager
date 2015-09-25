@@ -23,17 +23,20 @@ class CKANDatasetManager(object):
     def __init__(self, engine_url, api_key, model_name, 
                  dataset_notes="CKAN Dataset", 
                  resource_description="CKAN Resource",
-                 date_format_string="%Y%m%d"):
+                 date_format_string="%Y%m%d",
+                 owner_org=""):
         if engine_url.endswith('/'):
             engine_url = engine_url[:-1]
         if not engine_url.endswith('api/action') and not engine_url.endswith('api/3/action'):
-            engine_url += '/api/action'
+            engine_url += '/api/3/action'
         
+        print engine_url
         self.dataset_engine = CkanDatasetEngine(endpoint=engine_url, apikey=api_key)
         self.model_name = model_name
         self.dataset_notes = dataset_notes
         self.resource_description = resource_description
         self.date_format_string = date_format_string
+        self.owner_org = owner_org
         
     def initialize_run(self, watershed, subbasin, date_string):
         """
@@ -105,15 +108,31 @@ class CKANDatasetManager(object):
         #check if dataset exists
         if not dataset_id:
             #if it does not exist, create the dataset
-            result = self.dataset_engine.create_dataset(name=self.dataset_name,
-                                          notes=self.dataset_notes, 
-                                          version='1.0', 
-                                          tethys_app='erfp_tool', 
-                                          waterhsed=self.watershed,
-                                          subbasin=self.subbasin,
-                                          month=self.date.month,
-                                          year=self.date.year)
-            dataset_id = result['result']['id']
+            if not self.owner_org:
+                result = self.dataset_engine.create_dataset(name=self.dataset_name,
+                                                            notes=self.dataset_notes, 
+                                                            version='1.0', 
+                                                            tethys_app='erfp_tool',
+                                                            waterhsed=self.watershed,
+                                                            subbasin=self.subbasin,
+                                                            month=self.date.month,
+                                                            year=self.date.year)
+            else:
+                result = self.dataset_engine.create_dataset(name=self.dataset_name,
+                                                            notes=self.dataset_notes, 
+                                                            version='1.0', 
+                                                            tethys_app='erfp_tool',
+                                                            waterhsed=self.watershed,
+                                                            subbasin=self.subbasin,
+                                                            month=self.date.month,
+                                                            year=self.date.year,
+                                                            owner_org=self.owner_org)
+            try:
+                dataset_id = result['result']['id']
+            except KeyError:
+                print self.dataset_name, result
+                raise
+
         return dataset_id
        
     def upload_resource(self, file_path, overwrite=False, file_format='tar.gz'):
@@ -124,7 +143,6 @@ class CKANDatasetManager(object):
         dataset_id = self.create_dataset()
         if dataset_id:
             #check if dataset already exists
-            
             resource_results = self.dataset_engine.search_resources({'name':self.resource_name},
                                                                     datset_id=dataset_id)
             try:
@@ -152,7 +170,6 @@ class CKANDatasetManager(object):
                     self.dataset_engine.delete_resource(same_ckan_resource_id)
 
                 if not same_ckan_resource_id or overwrite:
-                    
                     #upload resources to the dataset
                     return self.dataset_engine.create_resource(dataset_id, 
                                                     name=self.resource_name, 
@@ -162,13 +179,16 @@ class CKANDatasetManager(object):
                                                     watershed=self.watershed,
                                                     subbasin=self.subbasin,
                                                     forecast_date=self.date_string,
-                                                    description=self.resource_description)
+                                                    description=self.resource_description,
+                                                    url="")
                                                     
                 else:
                     print "Resource", self.resource_name ,"exists. Skipping ..."
             except Exception,e:
                 print e
                 pass
+        else:
+            print "Failed to find/create dataset"
          
     def zip_upload_file(self, file_path):
         """
@@ -322,14 +342,15 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
     This class is used to find and download, zip and upload ECMWFRAPID 
     prediction files from/to a data server
     """
-    def __init__(self, engine_url, api_key):
+    def __init__(self, engine_url, api_key, owner_org=""):
         super(ECMWFRAPIDDatasetManager, self).__init__(engine_url, 
                                                         api_key,
                                                         'erfp',
                                                         "ECMWF-RAPID Flood Predicition Dataset",
                                                         'This dataset contians NetCDF3 files produced by '
                                                         'downscalsing ECMWF forecasts and routing them with RAPID',
-                                                        "%Y%m%d.%H"
+                                                        "%Y%m%d.%H",
+                                                        owner_org
                                                         )
                                                         
     def initialize_run_ecmwf(self, watershed, subbasin, date_string):
@@ -397,9 +418,12 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                 with tarfile.open(output_tar_file, "w:gz") as tar:
                     tar.add(directory_file, arcname=os.path.basename(directory_file))
             #upload file
-            self.upload_resource(output_tar_file)
+            resource_info = self.upload_resource(output_tar_file)
+            if not resource_info['success']:
+                print 'Error:', resource_info['error']
             os.remove(output_tar_file)
         print "%s datasets uploaded" % len(directory_files)
+        return resource_info
 
     def zip_upload_forecasts_in_directory(self, directory_path, search_string="*.nc"):
         """
@@ -422,6 +446,10 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                     tar.add(directory_file, arcname=os.path.basename(directory_file))
             #upload file
             resource_info = self.upload_resource(output_tar_file)
+            #resource_info is None if exists already
+            if resource_info is not None:
+                if not resource_info['success']:
+                    print 'Error:', resource_info['error']
             os.remove(output_tar_file)
         print "%s datasets uploaded" % len(directory_files)
         return resource_info
@@ -446,6 +474,7 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                     self.initialize_run_ecmwf(watershed, subbasin, date_string)
                     self.zip_upload_forecasts_in_directory(os.path.join(watershed_dir, date_string),
                                                            'Qout_%s*.nc' % subbasin)
+                    self.zip_upload_warning_points_in_directory(os.path.join(watershed_dir, date_string))
     
     def download_recent_resource(self, watershed, subbasin, main_extract_directory):
         """
@@ -498,14 +527,15 @@ class WRFHydroHRRRDatasetManager(CKANDatasetManager):
     This class is used to find and download, zip and upload ECMWFRAPID 
     prediction files from/to a data server
     """
-    def __init__(self, engine_url, api_key):
+    def __init__(self, engine_url, api_key, owner_org=""):
         super(WRFHydroHRRRDatasetManager, self).__init__(engine_url, 
                                                         api_key,
                                                         'wrfp',
                                                         "WRF-Hydro HRRR Flood Predicition Dataset",
                                                         'This dataset contians NetCDF3 files produced by '
                                                         'downscalsing WRF-Hydro forecasts and routing them with RAPID',
-                                                        "%Y%m%dT%H%MZ"
+                                                        "%Y%m%dT%H%MZ",
+                                                        owner_org
                                                         )
           
     def zip_upload_resource(self, source_file, watershed, subbasin):
@@ -549,12 +579,13 @@ class RAPIDInputDatasetManager(CKANDatasetManager):
     This class is used to find and download, zip and upload ECMWFRAPID 
     prediction files from/to a data server
     """
-    def __init__(self, engine_url, api_key, model_name, app_instance_id):
+    def __init__(self, engine_url, api_key, model_name, app_instance_id, owner_org=""):
         super(RAPIDInputDatasetManager, self).__init__(engine_url, 
                                                         api_key,
                                                         model_name,
                                                         "RAPID Input Dataset for %s" % model_name,
-                                                        'This dataset contians RAPID files for %s' % model_name)
+                                                        'This dataset contians RAPID files for %s' % model_name,
+                                                        owner_org=owner_org)
         self.app_instance_id = app_instance_id
         self.dataset_name = '%s-rapid-input-%s' % (self.model_name, self.app_instance_id)
 
@@ -787,12 +818,12 @@ if __name__ == "__main__":
     """    
     Tests for the datasets
     """
-    #engine_url = 'http://ciwckan.chpc.utah.edu'
-    #api_key = '8dcc1b34-0e09-4ddc-8356-df4a24e5be87'
+    #engine_url = ''
+    #api_key = ''
     #ECMWF
     """
-    er_manager = ECMWFRAPIDDatasetManager(engine_url, api_key)
-    er_manager.zip_upload_resources(source_directory='/home/alan/work/rapid/output/')
+    er_manager = ECMWFRAPIDDatasetManager(engine_url, api_key, owner_org="erdc")
+    er_manager.zip_upload_resources(source_directory='/home/alan/work/rapid-io/output/')
     er_manager.download_prediction_resource(watershed='magdalena', 
                                             subbasin='el_banco', 
                                             date_string='20150505.0', 
