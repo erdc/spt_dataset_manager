@@ -30,7 +30,7 @@ You may need to go to: /usr/lib/tethys/lib/python2.7/site-packages/tethys_datase
 and mmodify this section of code to look like this:
 ```python
 def create_resource(self, dataset_id, url=None, file=None, console=False, **kwargs):
-...
+  ...
   #if url and file:
       #raise IOError('The url and file parameters are mutually exclusive: use one, not both.')
   if not url and not file:
