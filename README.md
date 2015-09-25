@@ -15,12 +15,26 @@ $ git clone https://github.com/erdc-cm/spt_dataset_manager.git
 ```
 
 #Troubleshooting
-If you see this error:
-ImportError: No module named packages.urllib3.poolmanager
+## ImportError: No module named packages.urllib3.poolmanager
 ```
 $ pip install pip --upgrade
 ```
 Restart your terminal
 ```
 $ pip install requests --upgrade
+```
+## If you are using CKAN 2.3 -2.5:
+If you see this error when uploading a dataset: The url and file parameters are mutually exclusive: use one, not both.
+
+You may need to go to: /usr/lib/tethys/lib/python2.7/site-packages/tethys_dataset_services/engines/ckan_engine.py
+and make it look like this:
+```python
+def create_resource(self, dataset_id, url=None, file=None, console=False, **kwargs):
+...
+#if url and file:
+      #raise IOError('The url and file parameters are mutually exclusive: use one, not both.')
+  if not url and not file:
+      raise IOError('The url or file parameter is required, but do not use both.')
+
+
 ```
