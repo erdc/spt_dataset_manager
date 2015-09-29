@@ -409,6 +409,7 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
         #zip file and get dataset information
         print "Zipping and uploading warning points files for watershed: %s %s" % (self.watershed, self.subbasin)
         directory_files = glob(os.path.join(directory_path,search_string))
+        resource_info = None
         for directory_file in directory_files:
             return_period = return_period_search.search(os.path.basename(directory_file)).group(1)
             self.update_resource_return_period(return_period)
@@ -419,8 +420,9 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                     tar.add(directory_file, arcname=os.path.basename(directory_file))
             #upload file
             resource_info = self.upload_resource(output_tar_file)
-            if not resource_info['success']:
-                print 'Error:', resource_info['error']
+            if resource_info is not None:
+                if not resource_info['success']:
+                    print 'Error:', resource_info['error']
             os.remove(output_tar_file)
         print "%s datasets uploaded" % len(directory_files)
         return resource_info
@@ -818,8 +820,8 @@ if __name__ == "__main__":
     """    
     Tests for the datasets
     """
-    #engine_url = ''
-    #api_key = ''
+    #engine_url = 'http://test.ckan.org/api/3/action'
+    #api_key = 'fhdfhadHFADH'
     #ECMWF
     """
     er_manager = ECMWFRAPIDDatasetManager(engine_url, api_key, owner_org="erdc")
