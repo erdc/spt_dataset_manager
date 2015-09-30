@@ -783,16 +783,19 @@ class GeoServerDatasetManager(object):
         layer_name = self.get_layer_name(resource_name)
         if "name" in dir(file_list[0]):
             #if upload via web
-            self.dataset_engine.create_shapefile_resource(layer_name, 
-                                                          shapefile_upload=file_list,
-                                                          overwrite=True)
+            result = self.dataset_engine.create_shapefile_resource(layer_name, 
+                                                                   shapefile_upload=file_list,
+                                                                   overwrite=True)
         else:
             #if file paths
             file_name = os.path.splitext(file_list[0])[0]
-            self.dataset_engine.create_shapefile_resource(layer_name, 
-                                                          shapefile_base=file_name,
-                                                          overwrite=True)
+            result = self.dataset_engine.create_shapefile_resource(layer_name, 
+                                                                   shapefile_base=file_name,
+                                                                   overwrite=True)
             
+        if not result['success']:
+            print result['error']
+            return None
         return layer_name
         
     def purge_remove_geoserver_layer(self, layer_id):
