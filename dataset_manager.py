@@ -11,7 +11,17 @@ import zipfile
 #tethys imports
 from tethys_dataset_services.engines import (GeoServerSpatialDatasetEngine, 
                                              CkanDatasetEngine)
-
+#------------------------------------------------------------------------------
+#Helper Function
+#------------------------------------------------------------------------------
+def get_watershed_subbasin_from_folder(folder_name):
+    """
+    Get's the watershed & subbasin name from folder
+    """
+    input_folder_split = folder_name.split("-")
+    watershed = input_folder_split[0].lower()
+    subbasin = input_folder_split[1].lower()
+    return watershed, subbasin
 #------------------------------------------------------------------------------
 #Main CKAN Dataset Manager Class
 #------------------------------------------------------------------------------
@@ -112,7 +122,7 @@ class CKANDatasetManager(object):
                 result = self.dataset_engine.create_dataset(name=self.dataset_name,
                                                             notes=self.dataset_notes, 
                                                             version='1.0', 
-                                                            tethys_app='erfp_tool',
+                                                            tethys_app='streamflow_prediciton_tool',
                                                             waterhsed=self.watershed,
                                                             subbasin=self.subbasin,
                                                             month=self.date.month,
@@ -121,7 +131,7 @@ class CKANDatasetManager(object):
                 result = self.dataset_engine.create_dataset(name=self.dataset_name,
                                                             notes=self.dataset_notes, 
                                                             version='1.0', 
-                                                            tethys_app='erfp_tool',
+                                                            tethys_app='streamflow_prediciton_tool',
                                                             waterhsed=self.watershed,
                                                             subbasin=self.subbasin,
                                                             month=self.date.month,
@@ -175,7 +185,7 @@ class CKANDatasetManager(object):
                                                     name=self.resource_name, 
                                                     file=file_path,
                                                     format=file_format, 
-                                                    tethys_app="erfp_tool",
+                                                    tethys_app="streamflow_prediciton_tool",
                                                     watershed=self.watershed,
                                                     subbasin=self.subbasin,
                                                     forecast_date=self.date_string,
@@ -386,18 +396,6 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                                                                 self.date_string,
                                                                 return_period)
 
-    def get_subbasin_name_list(self, source_directory, subbasin_name_search):
-        """
-        Get a list of subbasins in directory
-        """
-        subbasin_list = []
-        outflow_files = sorted(glob(os.path.join(source_directory,'Qout_*.nc')))
-        for outflow_file in outflow_files:
-            subbasin_name = subbasin_name_search.search(os.path.basename(outflow_file)).group(1)
-            if subbasin_name not in subbasin_list:
-                subbasin_list.append(subbasin_name)
-        return subbasin_list
-
     def zip_upload_warning_points_in_directory(self, directory_path, search_string="return_*_points.txt"):
         """
         This function packages all of the datasets into individual tar.gz files and
@@ -461,22 +459,20 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
         This function packages all of the datasets in to tar.gz files and
         returns their attributes
         """
-        watersheds = [d for d in os.listdir(source_directory) \
-                        if os.path.isdir(os.path.join(source_directory, d))]
-        subbasin_name_search = re.compile(r'Qout_(\w+)_\d+\.nc')
+        watershed_directories = [d for d in os.listdir(source_directory) \
+                                if os.path.isdir(os.path.join(source_directory, d))]
 
-        for watershed in watersheds:
-            watershed_dir = os.path.join(source_directory, watershed)
+        for watershed_directory in watershed_directories:
+            watershed_dir = os.path.join(source_directory, watershed_directory)
+            watershed, subbasin = get_watershed_subbasin_from_folder(watershed_directory)
             date_strings = [d for d in os.listdir(watershed_dir) \
                             if os.path.isdir(os.path.join(watershed_dir, d))]
             for date_string in date_strings:
-                subbasin_list = self.get_subbasin_name_list(os.path.join(watershed_dir, date_string), 
-                                                       subbasin_name_search)
-                for subbasin in subbasin_list:
-                    self.initialize_run_ecmwf(watershed, subbasin, date_string)
-                    self.zip_upload_forecasts_in_directory(os.path.join(watershed_dir, date_string),
-                                                           'Qout_%s*.nc' % subbasin)
-                    self.zip_upload_warning_points_in_directory(os.path.join(watershed_dir, date_string))
+                upload_dir = os.path.join(watershed_dir, date_string)
+                self.initialize_run_ecmwf(watershed, subbasin, date_string)
+                self.zip_upload_forecasts_in_directory(upload_dir,
+                                                       'Qout_*.nc')
+                self.zip_upload_warning_points_in_directory(upload_dir)
     
     def download_recent_resource(self, watershed, subbasin, main_extract_directory):
         """
@@ -806,14 +802,6 @@ class GeoServerDatasetManager(object):
         self.dataset_engine.delete_layer(layer_id, purge=True, recurse=True)
         self.dataset_engine.delete_resource(layer_id, purge=True, recurse=True)
         self.dataset_engine.delete_store(layer_id, purge=True, recurse=True)
-
-
-
-
-
-
-
-
 
 
 if __name__ == "__main__":
