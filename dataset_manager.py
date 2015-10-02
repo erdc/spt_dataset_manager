@@ -627,7 +627,7 @@ class RAPIDInputDatasetManager(CKANDatasetManager):
         self.initialize_run(watershed, subbasin)
         resource_info = self.upload_resource(upload_file, 
                                              True,
-                                             '.zip')
+                                             'zip')
         os.remove(upload_file)
         return resource_info
         
