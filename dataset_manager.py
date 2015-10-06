@@ -802,13 +802,35 @@ class GeoServerDatasetManager(object):
         """
         completely remove geoserver layer
         """
-        self.dataset_engine.delete_layer(layer_id, purge=True, recurse=True)
-        self.dataset_engine.delete_resource(layer_id, purge=True, recurse=True)
-        self.dataset_engine.delete_store(layer_id, purge=True, recurse=True)
+        layer_result = self.dataset_engine.delete_layer(layer_id, recurse=True)
+        if layer_result:
+            if not layer_result['success']:
+                print layer_result
+        resource_result = self.dataset_engine.delete_resource(layer_id, recurse=True)
+        if resource_result:
+            if not resource_result['success']:
+                print resource_result
+        store_result = self.dataset_engine.delete_store(layer_id, recurse=True)
+        if store_result:
+            if not store_result['success']:
+                print store_result
+
+    def purge_remove_geoserver_layer_group(self, layer_group_id):
+        """
+        completely remove geoserver layer group and all assocated layers
+        """
+        layer_group_info = self.dataset_engine.get_layer_group(layer_group_id)
+        if layer_group_info['success']: 
+            print self.dataset_engine.delete_layer_group(layer_group_id)
+            for layer in layer_group_info['result']['layers']:
+                self.purge_remove_geoserver_layer(layer)
+
 
 
 if __name__ == "__main__":
-    """    
+    
+  
+    """
     Tests for the datasets
     """
     #engine_url = 'http://test.ckan.org/api/3/action'
@@ -848,4 +870,12 @@ if __name__ == "__main__":
                                        subbasin='huc_2_12', 
                                        extract_directory='/home/alan/work/tmp_input/nfie_texas_gulf_region')
     ri_manager.sync_dataset('/home/alan/work/tmp_input/')
+    """
+    #GeoServer
+    """
+    gm = GeoServerDatasetManager(engine_url='http://localhost:8181/geoserver/rest', 
+                                 username='admin',
+                                 password='geoserver',
+                                 app_instance_id='')
+    gm.purge_remove_geoserver_layer_group('')
     """
