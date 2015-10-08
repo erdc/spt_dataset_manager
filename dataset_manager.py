@@ -770,15 +770,16 @@ class GeoServerDatasetManager(object):
         """
         return '{0}:{1}'.format(self.resource_workspace, resource_name)
                                              
-    def upload_shapefile(self, resource_name, file_list):
+    def upload_shapefile(self, resource_name, file_list, rename=True):
         
         """
         Upload shapefile to geoserver
         """
         #check inputs
         self.check_shapefile_input_files(file_list)
-        #rename files approprately
-        self.rename_shapefile_input_files(file_list, resource_name)
+        if rename == True:
+            #rename files approprately
+            self.rename_shapefile_input_files(file_list, resource_name)
         
         layer_name = self.get_layer_name(resource_name)
         if "name" in dir(file_list[0]):
@@ -802,18 +803,32 @@ class GeoServerDatasetManager(object):
         """
         completely remove geoserver layer
         """
-        layer_result = self.dataset_engine.delete_layer(layer_id, recurse=True)
-        if layer_result:
-            if not layer_result['success']:
-                print layer_result
-        resource_result = self.dataset_engine.delete_resource(layer_id, recurse=True)
-        if resource_result:
-            if not resource_result['success']:
-                print resource_result
-        store_result = self.dataset_engine.delete_store(layer_id, recurse=True)
-        if store_result:
-            if not store_result['success']:
-                print store_result
+        def delete_old_layer(layer_id):
+            """
+            Deletes old layer in geoserver
+            """
+            #delete old layer
+            print "Deleting old geoserver layer ..."
+            layer_result = self.dataset_engine.delete_layer(layer_id, recurse=True)
+            if layer_result:
+                if not layer_result['success']:
+                    print layer_result
+            resource_result = self.dataset_engine.delete_resource(layer_id, recurse=True)
+            if resource_result:
+                if not resource_result['success']:
+                    print resource_result
+            store_result = self.dataset_engine.delete_store(layer_id, recurse=True)
+            if store_result:
+                if not store_result['success']:
+                    print store_result
+        delete_old_layer(layer_id)
+        print "Uploading empty file (becuase it does not delete on disk)"
+        
+        path_to_empty_shapefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+                                               "empty_shapefile", 
+                                               "empty_delete_me*")
+        self.upload_shapefile(layer_id, glob(path_to_empty_shapefile), rename=False)
+        delete_old_layer(layer_id)
 
     def purge_remove_geoserver_layer_group(self, layer_group_id):
         """
@@ -872,10 +887,14 @@ if __name__ == "__main__":
     ri_manager.sync_dataset('/home/alan/work/tmp_input/')
     """
     #GeoServer
+    #geoserver_url=''
+    #geoserver_username=''
+    #geoserver_password=''
+    #app_instance_id=''                          
     """
-    gm = GeoServerDatasetManager(engine_url='http://localhost:8181/geoserver/rest', 
-                                 username='admin',
-                                 password='geoserver',
-                                 app_instance_id='')
-    gm.purge_remove_geoserver_layer_group('')
+    gm = GeoServerDatasetManager(engine_url=geoserver_url, 
+                                 username=geoserver_username,
+                                 password=geoserver_password,
+                                 app_instance_id=app_instance_id)
+    gm.purge_remove_geoserver_layer_group('spt-9f7cb53882ed5820b3554a9d64e95273:korean_peninsula-korea-floodmap-20151006.0')
     """
