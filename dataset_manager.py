@@ -768,7 +768,10 @@ class GeoServerDatasetManager(object):
         """
         Get full layer name based on resource name
         """
-        return '{0}:{1}'.format(self.resource_workspace, resource_name)
+        if not resource_name.startswith("{0}:".format(self.resource_workspace)):
+            return '{0}:{1}'.format(self.resource_workspace, resource_name)
+        else:
+            return resource_name
                                              
     def upload_shapefile(self, resource_name, file_list, rename=True):
         
@@ -809,15 +812,15 @@ class GeoServerDatasetManager(object):
             """
             #delete old layer
             print "Deleting old geoserver layer ..."
-            layer_result = self.dataset_engine.delete_layer(layer_id, recurse=True)
+            layer_result = self.dataset_engine.delete_layer(layer_id)
             if layer_result:
                 if not layer_result['success']:
                     print layer_result
-            resource_result = self.dataset_engine.delete_resource(layer_id, recurse=True)
+            resource_result = self.dataset_engine.delete_resource(layer_id)
             if resource_result:
                 if not resource_result['success']:
                     print resource_result
-            store_result = self.dataset_engine.delete_store(layer_id, recurse=True)
+            store_result = self.dataset_engine.delete_store(layer_id)
             if store_result:
                 if not store_result['success']:
                     print store_result
@@ -838,7 +841,7 @@ class GeoServerDatasetManager(object):
         if layer_group_info['success']: 
             print self.dataset_engine.delete_layer_group(layer_group_id)
             for layer in layer_group_info['result']['layers']:
-                self.purge_remove_geoserver_layer(layer)
+                self.purge_remove_geoserver_layer(self.get_layer_name(layer))
 
 
 
