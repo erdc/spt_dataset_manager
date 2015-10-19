@@ -773,7 +773,7 @@ class GeoServerDatasetManager(object):
         else:
             return resource_name
                                              
-    def upload_shapefile(self, resource_name, file_list, rename=True):
+    def upload_shapefile(self, resource_name, file_list, rename=True, overwrite=True):
         
         """
         Upload shapefile to geoserver
@@ -789,13 +789,13 @@ class GeoServerDatasetManager(object):
             #if upload via web
             result = self.dataset_engine.create_shapefile_resource(layer_name, 
                                                                    shapefile_upload=file_list,
-                                                                   overwrite=True)
+                                                                   overwrite=overwrite)
         else:
             #if file paths
             file_name = os.path.splitext(file_list[0])[0]
             result = self.dataset_engine.create_shapefile_resource(layer_name, 
                                                                    shapefile_base=file_name,
-                                                                   overwrite=True)
+                                                                   overwrite=overwrite)
             
         if not result['success']:
             print result['error']
