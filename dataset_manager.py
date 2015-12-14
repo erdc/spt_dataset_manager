@@ -40,7 +40,6 @@ class CKANDatasetManager(object):
         if not engine_url.endswith('api/action') and not engine_url.endswith('api/3/action'):
             engine_url += '/api/3/action'
         
-        print engine_url
         self.dataset_engine = CkanDatasetEngine(endpoint=engine_url, apikey=api_key)
         self.model_name = model_name
         self.dataset_notes = dataset_notes
@@ -102,7 +101,6 @@ class CKANDatasetManager(object):
         """
         # Use the json module to load CKAN's response into a dictionary.
         response_dict = self.dataset_engine.search_datasets({ 'name': self.dataset_name })
-        
         if response_dict['success']:
             if int(response_dict['result']['count']) > 0:
                 return response_dict['result']['results'][0]['id']
@@ -510,13 +508,27 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                 if dataset_ready or (today_datetime-today >= datetime.timedelta(1)):
                     extract_directory = os.path.join(main_extract_directory, self.watershed, self.subbasin, date_string)
                     download_file = self.download_resource_from_info(extract_directory,
-                                                     dataset_info['resources'])
+                                                                     dataset_info['resources'])
 
             iteration += 1
                     
         if not download_file:
             print "Recent resources not found. Skipping ..."
-                                      
+                                     
+    def download_prediction_dataset(self, watershed, subbasin, date_string, extract_directory):
+        """
+        This function downloads a prediction resource
+        """
+        download_file = False
+        self.initialize_run_ecmwf(watershed, subbasin, date_string)
+        #get list of all resources
+        dataset_info = self.get_dataset_info()
+        if dataset_info and extract_directory and os.path.exists(extract_directory):
+            download_file = self.download_resource_from_info(os.path.join(extract_directory, date_string),
+                                                             dataset_info['resources'])
+        if not download_file:
+            print "Recent resources not found. Skipping ..."
+
 #------------------------------------------------------------------------------
 #WRF-Hydro RAPID CKAN Dataset Manager Class
 #------------------------------------------------------------------------------
