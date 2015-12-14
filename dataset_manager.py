@@ -869,10 +869,10 @@ if __name__ == "__main__":
     """
     er_manager = ECMWFRAPIDDatasetManager(engine_url, api_key, owner_org="erdc")
     er_manager.zip_upload_resources(source_directory='/home/alan/work/rapid-io/output/')
-    er_manager.download_prediction_resource(watershed='magdalena', 
+    er_manager.download_prediction_dataset(watershed='magdalena', 
                                             subbasin='el_banco', 
                                             date_string='20150505.0', 
-                                            extract_directory='/home/alan/work/rapid/output/magdalena/20150505.0')
+                                            extract_directory='/home/alan/work/rapid/output/magdalena')
     er_manager.download_recent_resource(watershed="rio_yds", 
                                         subbasin="palo_alto", 
                                         main_extract_directory='/home/alan/tethysdev/tethysapp-erfp_tool/ecmwf_rapid_predictions' )
