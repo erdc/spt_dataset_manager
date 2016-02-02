@@ -49,6 +49,7 @@ class CKANDatasetManager(object):
             engine_url += '/api/3/action'
         
         self.dataset_engine = CkanDatasetEngine(endpoint=engine_url, apikey=api_key)
+        self.dataset_engine.validate()
         self.model_name = model_name
         self.dataset_notes = dataset_notes
         self.resource_description = resource_description
@@ -734,6 +735,7 @@ class GeoServerDatasetManager(object):
         self.dataset_engine = GeoServerSpatialDatasetEngine(endpoint=engine_url, 
                                                             username=username,
                                                             password=password)
+        self.dataset_engine.validate()
         self.resource_workspace = 'spt-%s' % app_instance_id
         self.dataset_engine.create_workspace(workspace_id=self.resource_workspace, 
                                              uri=app_instance_id)
@@ -819,8 +821,8 @@ class GeoServerDatasetManager(object):
             
         if not result['success']:
             print result['error']
-            return None
-        return layer_name
+            return None, None
+        return layer_name, result['result']
         
     def purge_remove_geoserver_layer(self, layer_id):
         """
@@ -859,7 +861,7 @@ class GeoServerDatasetManager(object):
         """
         layer_group_info = self.dataset_engine.get_layer_group(layer_group_id)
         if layer_group_info['success']: 
-            print self.dataset_engine.delete_layer_group(layer_group_id)
+            self.dataset_engine.delete_layer_group(layer_group_id)
             for layer in layer_group_info['result']['layers']:
                 self.purge_remove_geoserver_layer(self.get_layer_name(layer))
 
