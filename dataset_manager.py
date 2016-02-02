@@ -515,7 +515,9 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
 
                 #make sure there are at least 52 or at lest a day has passed before downloading
                 if dataset_ready or (today_datetime-today >= datetime.timedelta(1)):
-                    extract_directory = os.path.join(main_extract_directory, self.watershed, self.subbasin, date_string)
+                    extract_directory = os.path.join(main_extract_directory, 
+                                                     "{0}-{1}".format(self.watershed, self.subbasin), 
+                                                     date_string)
                     download_file = self.download_resource_from_info(extract_directory,
                                                                      dataset_info['resources'])
 
@@ -583,7 +585,8 @@ class WRFHydroHRRRDatasetManager(CKANDatasetManager):
             self.initialize_run(watershed, subbasin, date_string)
             resource_info = self.get_resource_info()
             if resource_info and main_extract_directory and os.path.exists(main_extract_directory):
-                extract_directory = os.path.join(main_extract_directory, self.watershed, self.subbasin)
+                extract_directory = os.path.join(main_extract_directory, 
+                                                 "{0}-{1}".format(self.watershed, self.subbasin))
                 download_file = self.download_resource(extract_directory, "RapidResult_%s_CF.nc" % date_string)
             iteration += 1
                     
