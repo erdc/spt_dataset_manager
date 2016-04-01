@@ -30,6 +30,7 @@ def get_watershed_subbasin_from_folder(folder_name):
     watershed = input_folder_split[0].lower()
     subbasin = input_folder_split[1].lower()
     return watershed, subbasin
+    
 #------------------------------------------------------------------------------
 #Main CKAN Dataset Manager Class
 #------------------------------------------------------------------------------
@@ -277,7 +278,7 @@ class CKANDatasetManager(object):
         """
         Downloads a resource from url
         """
-        data_downloaded = False
+        num_resources_downloaded = 0
         #only download if file does not exist already
         check_location = extract_directory
         if local_file:
@@ -298,35 +299,34 @@ class CKANDatasetManager(object):
                                                    local_tar_file)
                 if os.path.exists(local_tar_file_path):
                     print "Local raw file found. Skipping ..."
-                    data_downloaded = False
-                try:    
-                    r = get(resource_info['url'], stream=True)
-                    with open(local_tar_file_path, 'wb') as f:
-                        for chunk in r.iter_content(chunk_size=1024): 
-                            if chunk: # filter out keep-alive new chunks
-                                f.write(chunk)
-                                f.flush()
-        
-                    if file_format.lower() == "tar.gz":
-                        with tarfile.open(local_tar_file_path) as tar:
-                            tar.extractall(extract_directory)
-                    elif file_format.lower() == "zip":
-                        with zipfile.ZipFile(local_tar_file_path) as zip_file:
-                            zip_file.extractall(extract_directory)
-                    else:
-                        print "Unsupported file format. Skipping ..."
-                except Exception, ex:
-                    print ex
-                    data_downloaded = False
-                    pass
-                
-                try:
-                    os.remove(local_tar_file_path)
-                except OSError:
-                    pass
-                
+                else:
+                    try:    
+                        r = get(resource_info['url'], stream=True)
+                        with open(local_tar_file_path, 'wb') as f:
+                            for chunk in r.iter_content(chunk_size=1024): 
+                                if chunk: # filter out keep-alive new chunks
+                                    f.write(chunk)
+                                    f.flush()
+            
+                        if file_format.lower() == "tar.gz":
+                            with tarfile.open(local_tar_file_path) as tar:
+                                tar.extractall(extract_directory)
+                        elif file_format.lower() == "zip":
+                            with zipfile.ZipFile(local_tar_file_path) as zip_file:
+                                zip_file.extractall(extract_directory)
+                        else:
+                            print "Unsupported file format. Skipping ..."
+                    except Exception, ex:
+                        print ex
+                        pass
+                    
+                    try:
+                        os.remove(local_tar_file_path)
+                    except OSError:
+                        pass
+                    num_resources_downloaded+=1
             print "Finished downloading and extracting file(s)"
-            return data_downloaded
+            return num_resources_downloaded>0
         else:
             print "Resource exists locally. Skipping ..."
             return False
@@ -412,7 +412,8 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
         return_period_search = re.compile(r'return_(\d+)_points\.txt')
 
         #zip file and get dataset information
-        print "Zipping and uploading warning points files for watershed: %s %s" % (self.watershed, self.subbasin)
+        print("Zipping and uploading warning points files for watershed: {0} {1}".format(self.watershed, 
+                                                                                         self.subbasin))
         directory_files = glob(os.path.join(directory_path,search_string))
         resource_info = None
         for directory_file in directory_files:
@@ -427,9 +428,9 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
             resource_info = self.upload_resource(output_tar_file)
             if resource_info is not None:
                 if not resource_info['success']:
-                    print 'Error:', resource_info['error']
+                    print('Error: {0}'.format(resource_info['error']))
             os.remove(output_tar_file)
-        print "%s datasets uploaded" % len(directory_files)
+        print("{0} datasets uploaded".format(len(directory_files)))
         return resource_info
 
     def zip_upload_forecasts_in_directory(self, directory_path, search_string="*.nc"):
@@ -441,7 +442,8 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
         ensemble_number_search = re.compile(r'Qout_\w+_(\d+)\.nc')
 
         #zip file and get dataset information
-        print "Zipping and uploading files for watershed: %s %s" % (self.watershed, self.subbasin)
+        print("Zipping and uploading files for watershed: {0} {1}".format(self.watershed, 
+                                                                          self.subbasin))
         directory_files = glob(os.path.join(directory_path,search_string))
         for directory_file in directory_files:
             ensemble_number = ensemble_number_search.search(os.path.basename(directory_file)).group(1)
@@ -456,9 +458,9 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
             #resource_info is None if exists already
             if resource_info is not None:
                 if not resource_info['success']:
-                    print 'Error:', resource_info['error']
+                    print('Error: {0}'.format(resource_info['error']))
             os.remove(output_tar_file)
-        print "%s datasets uploaded" % len(directory_files)
+        print("{0} datasets uploaded".format(len(directory_files)))
         return resource_info
 
     def zip_upload_resources(self, source_directory):
@@ -486,10 +488,10 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
         This function downloads the most recent resource within 6 days
         """
         iteration = 0
-        download_file = False
         today_datetime = datetime.datetime.utcnow()
+        download_file = False
         #search for datasets within the last 6 days
-        while not download_file and iteration < 12:
+        while iteration < 12:
             today =  today_datetime - datetime.timedelta(seconds=iteration*12*60*60)
             hour = '1200' if today.hour > 11 else '0'
             date_string = '%s.%s' % (today.strftime("%Y%m%d"), hour)
@@ -497,7 +499,9 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
             self.initialize_run_ecmwf(watershed, subbasin, date_string)
             #get list of all resources
             dataset_info = self.get_dataset_info()
-            if dataset_info and main_extract_directory and os.path.exists(main_extract_directory):
+            if not dataset_info or not main_extract_directory or not os.path.exists(main_extract_directory):
+                print("No dataset info available or invalid extract dorectory ...")
+            else:
                 #check if forecast is ready to be downloaded
                 forecast_count = 0
                 warning_point_count = 0
@@ -518,27 +522,70 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                     extract_directory = os.path.join(main_extract_directory, 
                                                      "{0}-{1}".format(self.watershed, self.subbasin), 
                                                      date_string)
-                    download_file = self.download_resource_from_info(extract_directory,
-                                                                     dataset_info['resources'])
+                                                     
+                    if self.download_resource_from_info(extract_directory,
+                                                        dataset_info['resources']):
+                        download_file = True
+                        break   
+                                                                     
 
             iteration += 1
                     
         if not download_file:
-            print "Recent resources not found. Skipping ..."
+            print("Recent resources not found ({0}-{1}). Skipping ...".format(watershed, subbasin))
                                      
+    def download_recent_warning_points(self, watershed, subbasin, main_extract_directory):
+        """
+        This function downloads the most recent resource within 6 days
+        """
+        iteration = 0
+        num_downloaded_files = 0
+        today_datetime = datetime.datetime.utcnow()
+        #search for datasets within the last 6 days
+        while iteration < 12 and num_downloaded_files<=0:
+            today =  today_datetime - datetime.timedelta(seconds=iteration*12*60*60)
+            hour = '1200' if today.hour > 11 else '0'
+            date_string = '%s.%s' % (today.strftime("%Y%m%d"), hour)
+            
+            self.initialize_run_ecmwf(watershed, subbasin, date_string)
+            #get list of all resources
+            dataset_info = self.get_dataset_info()
+            if dataset_info and main_extract_directory and os.path.exists(main_extract_directory):
+                #check if forecast is ready to be downloaded
+                warning_point_info_array = []
+                if dataset_info['num_resources'] >= 52:
+                    for resource in dataset_info['resources']:
+                        if "warning_points" in resource['name']:
+                            warning_point_info_array.append(resource)
+                #make sure there are 3 warning points datasets before downloading
+                if len(warning_point_info_array) == 3:
+                    for warning_point_info in warning_point_info_array:
+                        extract_directory = os.path.join(main_extract_directory, 
+                                                         "{0}-{1}".format(self.watershed, self.subbasin), 
+                                                         date_string)
+                        warning_name = warning_point_info['name'].split("-")[-1]
+                        warning_number = warning_name.split("_")[-1]
+                        if self.download_resource_from_info(extract_directory,
+                                                            [warning_point_info],
+                                                            "return_{0}_points.txt".format(warning_number)):
+                            num_downloaded_files += 1
+                    if num_downloaded_files > 0:
+                        break
+            iteration += 1
+        if not num_downloaded_files<=0:
+            print("Recent warning points not found. Skipping ...")
+            
     def download_prediction_dataset(self, watershed, subbasin, date_string, extract_directory):
         """
         This function downloads a prediction resource
         """
-        download_file = False
         self.initialize_run_ecmwf(watershed, subbasin, date_string)
         #get list of all resources
         dataset_info = self.get_dataset_info()
         if dataset_info and extract_directory and os.path.exists(extract_directory):
-            download_file = self.download_resource_from_info(os.path.join(extract_directory, date_string),
-                                                             dataset_info['resources'])
-        if not download_file:
-            print "Recent resources not found. Skipping ..."
+            if not self.download_resource_from_info(os.path.join(extract_directory, date_string),
+                                                    dataset_info['resources']):
+                print("Recent prediction datasets not found. Skipping ...")
 
 #------------------------------------------------------------------------------
 #WRF-Hydro RAPID CKAN Dataset Manager Class
@@ -876,11 +923,12 @@ if __name__ == "__main__":
     """
     Tests for the datasets
     """
-    #engine_url = 'http://test.ckan.org/api/3/action'
-    #api_key = 'fhdfhadHFADH'
+    #engine_url = 'http://ckan.org/api/3/action'
+    #api_key = 'abcdefg'
+    #owner_org="erdc"
     #ECMWF
     """
-    er_manager = ECMWFRAPIDDatasetManager(engine_url, api_key, owner_org="erdc")
+    er_manager = ECMWFRAPIDDatasetManager(engine_url, api_key, owner_org)
     er_manager.zip_upload_resources(source_directory='/home/alan/work/rapid-io/output/')
     er_manager.download_prediction_dataset(watershed='magdalena', 
                                             subbasin='el_banco', 
@@ -889,6 +937,9 @@ if __name__ == "__main__":
     er_manager.download_recent_resource(watershed="rio_yds", 
                                         subbasin="palo_alto", 
                                         main_extract_directory='/home/alan/tethysdev/tethysapp-erfp_tool/ecmwf_rapid_predictions' )
+    er_manager.download_recent_warning_points(watershed="rio_yds",
+                                              subbasin="palo_alto",
+                                              main_extract_directory="/home/alan/rapid-io/output")
     """
     #WRF-Hydro
     """
