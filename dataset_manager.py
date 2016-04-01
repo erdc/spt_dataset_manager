@@ -326,10 +326,10 @@ class CKANDatasetManager(object):
                         pass
                     num_resources_downloaded+=1
             print "Finished downloading and extracting file(s)"
-            return num_resources_downloaded>0
+            return num_resources_downloaded
         else:
             print "Resource exists locally. Skipping ..."
-            return False
+            return -1
 
     def download_resource(self, extract_directory, local_file=None):
         """
@@ -524,7 +524,7 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                                                      date_string)
                                                      
                     if self.download_resource_from_info(extract_directory,
-                                                        dataset_info['resources']):
+                                                        dataset_info['resources'])>0:
                         download_file = True
                         break   
                                                                      
@@ -536,13 +536,13 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                                      
     def download_recent_warning_points(self, watershed, subbasin, main_extract_directory):
         """
-        This function downloads the most recent resource within 6 days
+        This function downloads the most recent resource within 1 days
         """
         iteration = 0
-        num_downloaded_files = 0
+        downloaded_files = []
         today_datetime = datetime.datetime.utcnow()
         #search for datasets within the last 6 days
-        while iteration < 12 and num_downloaded_files<=0:
+        while iteration < 2 and not downloaded_files:
             today =  today_datetime - datetime.timedelta(seconds=iteration*12*60*60)
             hour = '1200' if today.hour > 11 else '0'
             date_string = '%s.%s' % (today.strftime("%Y%m%d"), hour)
@@ -565,15 +565,21 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                                                          date_string)
                         warning_name = warning_point_info['name'].split("-")[-1]
                         warning_number = warning_name.split("_")[-1]
-                        if self.download_resource_from_info(extract_directory,
-                                                            [warning_point_info],
-                                                            "return_{0}_points.txt".format(warning_number)):
-                            num_downloaded_files += 1
-                    if num_downloaded_files > 0:
+                        warning_file_name = "return_{0}_points.txt".format(warning_number)
+                        num_files_downloaded = self.download_resource_from_info(extract_directory,
+                                                                                [warning_point_info],
+                                                                                warning_file_name)
+                        if num_files_downloaded == -1:
+                            #Already exists
+                            break
+                        elif num_files_downloaded>0:
+                            downloaded_files.append(os.path.join(extract_directory, warning_file_name))
+                    if downloaded_files:
                         break
             iteration += 1
-        if not num_downloaded_files<=0:
+        if not downloaded_files:
             print("Recent warning points not found. Skipping ...")
+        return downloaded_files
             
     def download_prediction_dataset(self, watershed, subbasin, date_string, extract_directory):
         """
@@ -918,13 +924,11 @@ class GeoServerDatasetManager(object):
 
 
 if __name__ == "__main__":
-    
-  
     """
     Tests for the datasets
     """
     #engine_url = 'http://ckan.org/api/3/action'
-    #api_key = 'abcdefg'
+    #api_key = 'abc-123'
     #owner_org="erdc"
     #ECMWF
     """
@@ -936,7 +940,7 @@ if __name__ == "__main__":
                                             extract_directory='/home/alan/work/rapid/output/magdalena')
     er_manager.download_recent_resource(watershed="rio_yds", 
                                         subbasin="palo_alto", 
-                                        main_extract_directory='/home/alan/tethysdev/tethysapp-erfp_tool/ecmwf_rapid_predictions' )
+                                        main_extract_directory='/tethysapp-streamflow_prediciton_tool/ecmwf_rapid_predictions' )
     er_manager.download_recent_warning_points(watershed="rio_yds",
                                               subbasin="palo_alto",
                                               main_extract_directory="/home/alan/rapid-io/output")
