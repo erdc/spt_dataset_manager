@@ -579,7 +579,9 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
             iteration += 1
         if not downloaded_files:
             print("Recent warning points not found. Skipping ...")
-        return downloaded_files
+            return None
+        return {"forecast_date": today,
+                "downloaded_files" : downloaded_files}
             
     def download_prediction_dataset(self, watershed, subbasin, date_string, extract_directory):
         """
