@@ -544,6 +544,8 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
         #search for datasets within the last 6 days
         while iteration < 2 and not downloaded_files:
             today =  today_datetime - datetime.timedelta(seconds=iteration*12*60*60)
+            hour = 12 if today.hour > 11 else 0
+            today = datetime.datetime(today.year, today.month, today.day, hour)
             hour = '1200' if today.hour > 11 else '0'
             date_string = '%s.%s' % (today.strftime("%Y%m%d"), hour)
             
