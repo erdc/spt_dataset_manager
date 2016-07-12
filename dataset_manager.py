@@ -57,12 +57,10 @@ class CKANDatasetManager(object):
         self.date_format_string = date_format_string
         self.owner_org = owner_org
         
-    def initialize_run(self, watershed, subbasin, date_string):
+    def update_date(self, date_string):
         """
-        Initialize run for watershed upload/download
+        Update date information
         """
-        self.watershed = watershed.lower()
-        self.subbasin = subbasin.lower()
         self.date_string = date_string
         self.date = datetime.datetime.strptime(self.date_string, self.date_format_string)
         self.dataset_name = '%s-%s-%s-%s' % (self.model_name,
@@ -73,6 +71,14 @@ class CKANDatasetManager(object):
                                              self.watershed, 
                                              self.subbasin,
                                              self.date_string)
+
+    def initialize_run(self, watershed, subbasin, date_string):
+        """
+        Initialize run for watershed upload/download
+        """
+        self.watershed = watershed.lower()
+        self.subbasin = subbasin.lower()
+        self.update_date(date_string)
 
     def make_tarfile(self, file_path):
         """
@@ -351,6 +357,55 @@ class CKANDatasetManager(object):
         self.initialize_run(watershed, subbasin, date_string)
         self.download_resource(extract_directory)
 
+    def delete_past_datasets(self, days_from_now_buffer=180, all_datasets=False):
+        """
+        This function gets the info of a resource
+        """
+        # Use the json module to load CKAN's response into a dictionary.
+        if all_datasets:
+            dataset_name_query = '{0}-*'.format(self.model_name)
+        else:
+            dataset_name_query = '{0}-{1}-{2}-*'.format(self.model_name,
+                                                        self.watershed,
+                                                        self.subbasin)
+                                                        
+        initial_response_dict = self.dataset_engine.search_datasets({ 'name': dataset_name_query },
+                                                                    fl="id",
+                                                                    rows=1)
+        if initial_response_dict['success']:
+            print("DON'T FORGET TO PURGE IN CKAN ADMIN MENU!!!!")
+            total_num_datasets = int(initial_response_dict['result']['count'])
+            kill_loop = False
+            for ix in range(int(total_num_datasets/1000.0)+1):
+                response_dict = self.dataset_engine.search_datasets({ 'name': dataset_name_query }, 
+                                                                    rows=1000,
+                                                                    fl="id,name",
+                                                                    sort="forecast_date asc")
+                if not response_dict['success']:
+                    print("ERROR: {0}".format(response_dict))
+                    return
+                    
+                if int(response_dict['result']['count']) > 0:
+                    for dataset in response_dict['result']['results']:
+                        #print("FOUND Name: {0}, ID: {1}".format(dataset['name'], dataset['id']))
+                        #STEP 1: GET DATE
+                        dataset_date_string = dataset['name'].split("-")[-1].replace("t", ".")
+                        dataset_date = datetime.datetime.strptime(dataset_date_string, "%Y%m%d.%H")
+                        #STEP 2: IF OLD, DELETE ALL RESOURCES
+                        if dataset_date < (datetime.datetime.utcnow()-datetime.timedelta(days=days_from_now_buffer)):
+                            self.dataset_engine.delete_dataset(dataset['id'])
+                            print("DELETED Name: {0}, ID: {1}".format(dataset['name'], dataset['id']))
+                        else:
+                            kill_loop = True
+                            break
+                        
+                    if kill_loop:
+                        break
+                else:
+                    break
+            print("DON'T FORGET TO PURGE IN CKAN ADMIN MENU!!!!")
+        else:
+            print("ERROR: {0}".format(response_dict))
 #------------------------------------------------------------------------------
 #ECMWF RAPID CKAN Dataset Manager Class
 #------------------------------------------------------------------------------
@@ -931,17 +986,23 @@ if __name__ == "__main__":
     """
     Tests for the datasets
     """
-    #engine_url = 'http://ckan.org/api/3/action'
-    #api_key = 'abc-123'
-    #owner_org="erdc"
+    engine_url = 'http://ckan_url/api/3/action'
+    api_key = 'API-KEY-HERE'
+    owner_org="erdc"
     #ECMWF
     """
     er_manager = ECMWFRAPIDDatasetManager(engine_url, api_key, owner_org)
+
+    er_manager.initialize_run_ecmwf(watershed="mississippi_region",
+                                    subbasin="nfie",
+                                    date_string="20160711.1200")
+    er_manager.delete_past_datasets(days_from_now_buffer=180, all_datasets=False)
+
     er_manager.zip_upload_resources(source_directory='/home/alan/work/rapid-io/output/')
-    er_manager.download_prediction_dataset(watershed='magdalena', 
-                                            subbasin='el_banco', 
-                                            date_string='20150505.0', 
-                                            extract_directory='/home/alan/work/rapid/output/magdalena')
+    er_manager.download_prediction_dataset(watershed='texas_gulf_region', 
+                                           subbasin='huc_2_12', 
+                                           date_string='20160711.1200', 
+                                           extract_directory='/home/alan/rapid-io/output/erdc_texas_gulf_region-huc_2_12')
     er_manager.download_recent_resource(watershed="rio_yds", 
                                         subbasin="palo_alto", 
                                         main_extract_directory='/tethysapp-streamflow_prediciton_tool/ecmwf_rapid_predictions' )
