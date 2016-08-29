@@ -154,7 +154,7 @@ class CKANDatasetManager(object):
             try:
                 dataset_id = result['result']['id']
             except KeyError:
-                print self.dataset_name, result
+                print("{0} {1}".format(self.dataset_name, result))
                 raise
 
         return dataset_id
@@ -185,7 +185,7 @@ class CKANDatasetManager(object):
                     but requres both and to have only one ...
 
                     #update existing resource
-                    print resource_results['result']['results'][0]
+                    print(resource_results['result']['results'][0])
                     update_results = self.dataset_engine.update_resource(resource_results['result']['results'][0]['id'], 
                                                         file=file_to_upload,
                                                         url="",
@@ -207,25 +207,25 @@ class CKANDatasetManager(object):
                                                     url="")
                                                     
                 else:
-                    print "Resource", self.resource_name ,"exists. Skipping ..."
-            except Exception,e:
-                print e
+                    print("Resource {0} exists. Skipping ...".format(self.resource_name))
+            except Exception as e:
+                print(e)
                 pass
         else:
-            print "Failed to find/create dataset"
+            print("Failed to find/create dataset")
          
     def zip_upload_file(self, file_path):
         """
         This function uploads a resource to a dataset if it does not exist
         """
         #zip file and get dataset information
-        print "Zipping files for watershed: %s %s" % (self.watershed, self.subbasin)
+        print("Zipping files for watershed: {0} {1}".format(self.watershed, self.subbasin))
         tar_file_path = self.make_tarfile(file_path)    
-        print "Finished zipping files"
-        print "Uploading datasets"
+        print("Finished zipping files")
+        print("Uploading datasets")
         resource_info = self.upload_resource(tar_file_path)
         os.remove(tar_file_path)
-        print "Finished uploading datasets"
+        print("Finished uploading datasets")
         return resource_info
 
     def zip_upload_directory(self, directory_path, search_string="*", overwrite=False):
@@ -233,13 +233,13 @@ class CKANDatasetManager(object):
         This function uploads a resource to a dataset if it does not exist
         """
         #zip file and get dataset information
-        print "Zipping files for watershed: %s %s" % (self.watershed, self.subbasin)
+        print("Zipping files for watershed: {0} {1}".format(self.watershed, self.subbasin))
         tar_file_path = self.make_directory_tarfile(directory_path, search_string)    
-        print "Finished zipping files"
-        print "Uploading datasets"
+        print("Finished zipping files")
+        print("Uploading datasets")
         resource_info = self.upload_resource(tar_file_path, overwrite)
         os.remove(tar_file_path)
-        print "Finished uploading datasets"
+        print("Finished uploading datasets")
         return resource_info
            
     def get_resource_info(self):
@@ -257,8 +257,8 @@ class CKANDatasetManager(object):
                         if resource['name'] == self.resource_name:
                             #upload resources to the dataset
                             return resource
-            except Exception,e:
-                print e
+            except Exception as e:
+                print(e)
                 pass
         return None
 
@@ -290,7 +290,8 @@ class CKANDatasetManager(object):
         if local_file:
             check_location = os.path.join(extract_directory, local_file)
         if not os.path.exists(check_location):
-            print "Downloading and extracting files for watershed:", self.watershed, self.subbasin
+            print("Downloading and extracting files for watershed: {0} {1}".format(self.watershed, 
+                                                                                   self.subbasin))
             try:
                 os.makedirs(extract_directory)
             except OSError:
@@ -304,7 +305,7 @@ class CKANDatasetManager(object):
                 local_tar_file_path = os.path.join(extract_directory,
                                                    local_tar_file)
                 if os.path.exists(local_tar_file_path):
-                    print "Local raw file found. Skipping ..."
+                    print("Local raw file found. Skipping ...")
                 else:
                     try:    
                         r = get(resource_info['url'], stream=True)
@@ -321,9 +322,9 @@ class CKANDatasetManager(object):
                             with zipfile.ZipFile(local_tar_file_path) as zip_file:
                                 zip_file.extractall(extract_directory)
                         else:
-                            print "Unsupported file format. Skipping ..."
-                    except Exception, ex:
-                        print ex
+                            print("Unsupported file format. Skipping ...")
+                    except Exception as ex:
+                        print(ex)
                         pass
                     
                     try:
@@ -331,10 +332,10 @@ class CKANDatasetManager(object):
                     except OSError:
                         pass
                     num_resources_downloaded+=1
-            print "Finished downloading and extracting file(s)"
+            print("Finished downloading and extracting file(s)")
             return num_resources_downloaded
         else:
-            print "Resource exists locally. Skipping ..."
+            print("Resource exists locally. Skipping ...")
             return -1
 
     def download_resource(self, extract_directory, local_file=None):
@@ -347,7 +348,7 @@ class CKANDatasetManager(object):
                                                     [resource_info],
                                                      local_file)
         else:
-            print "Resource not found in CKAN. Skipping ..."
+            print("Resource not found in CKAN. Skipping ...")
             return False
 
     def download_prediction_resource(self, watershed, subbasin, date_string, extract_directory):
@@ -703,7 +704,7 @@ class WRFHydroHRRRDatasetManager(CKANDatasetManager):
             iteration += 1
                     
         if not download_file:
-            print "Recent resources not found. Skipping ..."
+            print("Recent resources not found. Skipping ...")
 
 #------------------------------------------------------------------------------
 #RAPID Input CKAN Dataset Manager Class
@@ -805,17 +806,17 @@ class RAPIDInputDatasetManager(CKANDatasetManager):
                 local_directory = os.path.join(extract_directory, local_resource['folder'])
                 if not ckan_resource:
                     #remove resources no longer on CKAN
-                    print "LOCAL DELETE", local_resource['watershed'], local_resource['subbasin']
+                    print("LOCAL DELETE {0} {1}".format(local_resource['watershed'], local_resource['subbasin']))
                     rmtree(local_directory)
                 elif datetime.datetime.strptime(ckan_resource[0]['created'].split(".")[0], "%Y-%m-%dT%H:%M:%S") > date_compare:
                     #2015-05-12T14:01:08.572338
                     #remove out of date local resources
-                    print "LOCAL PAST DELETE", local_resource['watershed'], local_resource['subbasin']
+                    print("LOCAL PAST DELETE {0} {1}".format(local_resource['watershed'], local_resource['subbasin']))
                     rmtree(local_directory)
             
             #STEP 2: Add new resources to local instance if not already here
             for ckan_resource in current_ckan_resources:         
-                print "ATTEMPT DOWNLOAD", ckan_resource['watershed'], ckan_resource['subbasin']
+                print("ATTEMPT DOWNLOAD {0} {1}".format(ckan_resource['watershed'], ckan_resource['subbasin']))
                 self.download_model_resource(ckan_resource,
                                              os.path.join(extract_directory, "%s-%s" % (ckan_resource['watershed'],
                                                                                         ckan_resource['subbasin'])))
@@ -935,7 +936,7 @@ class GeoServerDatasetManager(object):
                                                                    overwrite=overwrite)
             
         if not result['success']:
-            print result['error']
+            print(result['error'])
             return None, None
         return layer_name, result['result']
         
@@ -948,21 +949,21 @@ class GeoServerDatasetManager(object):
             Deletes old layer in geoserver
             """
             #delete old layer
-            print "Deleting old geoserver layer ..."
+            print("Deleting old geoserver layer ...")
             layer_result = self.dataset_engine.delete_layer(layer_id)
             if layer_result:
                 if not layer_result['success']:
-                    print layer_result
+                    print(layer_result)
             resource_result = self.dataset_engine.delete_resource(layer_id)
             if resource_result:
                 if not resource_result['success']:
-                    print resource_result
+                    print(resource_result)
             store_result = self.dataset_engine.delete_store(layer_id)
             if store_result:
                 if not store_result['success']:
-                    print store_result
+                    print(store_result)
         delete_old_layer(layer_id)
-        print "Uploading empty file (becuase it does not delete on disk)"
+        print("Uploading empty file (becuase it does not delete on disk)")
         
         path_to_empty_shapefile = os.path.join(os.path.dirname(os.path.abspath(__file__)), 
                                                "empty_shapefile", 
@@ -986,9 +987,9 @@ if __name__ == "__main__":
     """
     Tests for the datasets
     """
-    engine_url = 'http://ckan_url/api/3/action'
-    api_key = 'API-KEY-HERE'
-    owner_org="erdc"
+    #engine_url = 'http://ckan_url/api/3/action'
+    #api_key = 'API-KEY-HERE'
+    #owner_org="erdc"
     #ECMWF
     """
     er_manager = ECMWFRAPIDDatasetManager(engine_url, api_key, owner_org)
