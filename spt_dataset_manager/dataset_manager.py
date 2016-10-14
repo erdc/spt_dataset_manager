@@ -4,12 +4,12 @@
 ##  spt_dataset_manager
 ##
 ##  Created by Alan D. Snow.
-##  Copyright © 2015-2016 Alan D Snow. All rights reserved.
 ##  License: BSD-3 Clause
 
 import datetime
 from glob import glob
 import os
+from past.builtins import basestring
 import re
 from requests import get
 from shutil import rmtree

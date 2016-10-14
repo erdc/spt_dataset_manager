@@ -5,8 +5,7 @@ Streamflow Prediction Tool Dataset Manager (for CKAN and GeoServer)
 
 ##Step 1: Install tethys_dataset_services
 ```
-$ pip install requests_toolbelt
-$ pip install tethys_dataset_services
+$ pip install requests_toolbelt tethys_dataset_services future
 ```
 ##Step 2: Download the source code
 ```
