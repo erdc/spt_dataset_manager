@@ -1,4 +1,4 @@
-# sfpt_dataset_manager
+# spt_dataset_manager
 Streamflow Prediction Tool Dataset Manager (for CKAN and GeoServer)
 
 #Installation Instructions
@@ -11,6 +11,11 @@ $ pip install requests_toolbelt tethys_dataset_services future
 ```
 $ cd /path/to/your/scripts/
 $ git clone https://github.com/erdc-cm/spt_dataset_manager.git
+```
+##Step 3: Install the script
+```
+$ cd spt_dataset_manager
+$ python setup.py install
 ```
 
 #Troubleshooting
