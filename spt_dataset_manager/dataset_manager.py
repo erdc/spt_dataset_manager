@@ -459,13 +459,13 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                                                                 self.date_string,
                                                                 return_period)
 
-    def zip_upload_warning_points_in_directory(self, directory_path, search_string="return_*_points.txt"):
+    def zip_upload_warning_points_in_directory(self, directory_path, search_string="return_*_points.geojson"):
         """
         This function packages all of the datasets into individual tar.gz files and
         uploads them to the dataset
         """
         base_path = os.path.dirname(directory_path)
-        return_period_search = re.compile(r'return_(\d+)_points\.txt')
+        return_period_search = re.compile(r'return_(\d+)_points\.geojson')
 
         #zip file and get dataset information
         print("Zipping and uploading warning points files for watershed: {0} {1}".format(self.watershed, 
@@ -625,7 +625,7 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
                                                          date_string)
                         warning_name = warning_point_info['name'].split("-")[-1]
                         warning_number = warning_name.split("_")[-1]
-                        warning_file_name = "return_{0}_points.txt".format(warning_number)
+                        warning_file_name = "return_{0}_points.geojson".format(warning_number)
                         num_files_downloaded = self.download_resource_from_info(extract_directory,
                                                                                 [warning_point_info],
                                                                                 warning_file_name)
