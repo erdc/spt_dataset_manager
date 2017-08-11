@@ -555,8 +555,10 @@ class ECMWFRAPIDDatasetManager(CKANDatasetManager):
             self.initialize_run_ecmwf(watershed, subbasin, date_string)
             #get list of all resources
             dataset_info = self.get_dataset_info()
-            if not dataset_info or not main_extract_directory or not os.path.exists(main_extract_directory):
-                print("No dataset info available or invalid extract dorectory ...")
+            if not dataset_info:
+                print("No dataset info available ...")
+            elif not (main_extract_directory or not os.path.exists(main_extract_directory)):
+                print("No dataset info available or invalid extract directory ...")
             else:
                 #check if forecast is ready to be downloaded
                 forecast_count = 0
