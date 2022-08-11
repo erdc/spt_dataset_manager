@@ -10,7 +10,7 @@ $ pip install requests_toolbelt tethys_dataset_services future
 ##Step 2: Download the source code
 ```
 $ cd /path/to/your/scripts/
-$ git clone https://github.com/erdc-cm/spt_dataset_manager.git
+$ git clone https://github.com/erdc/spt_dataset_manager.git
 ```
 ##Step 3: Install the script
 ```
